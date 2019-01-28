@@ -2,7 +2,6 @@
 Uses handbrake to check if files are corrupted or unplayable
 
 ## Instructions
----
 
 Clone or download project
 
@@ -20,3 +19,14 @@ Example run: `.\scan.ps1 -dir 'c:\media\directory' -threads 4`
 
 - <b>EBML header parsing failed</b>: highly likely this file won't play
 - <b>Read error</b>: there are problems in the file but it <i>usually</i> can still play
+
+## Screenshots:
+
+In progress: 
+
+![In Progress](https://i.imgur.com/UuzdrZg.png)
+
+Completed: 
+
+![Completed](https://i.imgur.com/A0GjMeK.png)
+
