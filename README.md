@@ -5,7 +5,7 @@ Uses handbrake to check if files are corrupted or unplayable
 
 Clone or download project
 
-Right-click then press 'run with powershell' or run from powershell window
+Right-click `scan.ps1` then press 'run with powershell' or run from powershell window
 
 Example run: `.\scan.ps1 -dir 'c:\media\directory' -threads 4`
 
