@@ -6,7 +6,7 @@ param (
 )
 
 if ($threads -gt 4) {
-    Write-Host "`nWARNING: Selecting more than 4 threads may lock up your computer. Press N to set threads to 4 or press Y to continue..." -ForegroundColor Red
+    Write-Output "`nWARNING: Selecting more than 4 threads may lock up your computer. Press N to set threads to 4 or press Y to continue..."
     do {
         $keyPress = [System.Console]::ReadKey()
     }
@@ -27,10 +27,10 @@ $goodLogPath = $scriptPath + "\good.log"
 
 if (!(Test-Path $goodLogPath)) {
     New-Item -path $scriptPath -name good.log -type "file"
-    Write-Host "Created good log file"
+    Write-Output "Created good log file"
 }
 else {
-    Write-Host "`ngood.log file exists. Overwrite? Press N to append to existing file or Y to clear file." -ForegroundColor Yellow
+    Write-Output "`ngood.log file exists. Overwrite? Press N to append to existing file or Y to clear file."
     do {
         $keyPress = [System.Console]::ReadKey()
     }
@@ -42,10 +42,10 @@ else {
 
 if (!(Test-Path $errorLogPath)) {
     New-Item -path $scriptPath -name error.log -type "file"
-    Write-Host "Created error log file"
+    Write-Output "Created error log file"
 }
 else {
-    Write-Host "`nerror.log file exists. Overwrite? Press N to append to existing file or Y to clear file." -ForegroundColor Yellow
+    Write-Output "`nerror.log file exists. Overwrite? Press N to append to existing file or Y to clear file."
     do {
         $keyPress = [System.Console]::ReadKey()
     }
@@ -113,5 +113,5 @@ $timeTaken = $finishTime - $startTime
 
 Remove-Job -State Completed
 
-Write-Host "Scan took $($timeTaken.Days) Days $($timeTaken.Hours) Hours $($timeTaken.Minutes) Minutes $($timeTaken.Seconds) Seconds" -ForegroundColor Green
-Write-Host "$($totalErrors) files with problems. Refer to error.log for a list of problem files and good.log for good files." -ForegroundColor Red
+Write-Output "Scan took $($timeTaken.Days) Days $($timeTaken.Hours) Hours $($timeTaken.Minutes) Minutes $($timeTaken.Seconds) Seconds"
+Write-Output "$($totalErrors) files with problems. Refer to error.log for a list of problem files and good.log for good files."
