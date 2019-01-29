@@ -1,5 +1,5 @@
 # Corrupted Media Scanner
-Uses handbrake to check if files are corrupted or unplayable
+Uses handbrake to check if files are corrupt or unplayable
 
 ## Instructions
 
