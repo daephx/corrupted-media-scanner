@@ -5,6 +5,25 @@ param (
     [Int]$threads = 4
 )
 
+$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
+$handbrakePath = $scriptPath + "\HandBrakeCLI.exe"
+
+if (!(Test-Path $handbrakePath)) {
+    Write-Output "`nYou need to download HandBrakeCLI.exe and place it in the same directory as this script. `nDownload link: https://handbrake.fr/downloads2.php `nPress N to close the script or Y to open the above link to download."
+    do {
+        $keyPress = [System.Console]::ReadKey()
+    }
+    until ($keyPress.Key -eq "Y" -or $keyPress.Key -eq "N")
+    if ($keyPress.Key -eq "Y") {
+        Start-Process 'https://handbrake.fr/downloads2.php'
+        Write-Output "`n"
+        exit
+    } else {
+        Write-Output "`n"
+        exit
+    }
+}
+
 if ($threads -gt 4) {
     Write-Output "`nWARNING: Selecting more than 4 threads may lock up your computer. Press N to set threads to 4 or press Y to continue..."
     do {
@@ -18,10 +37,8 @@ if ($threads -gt 4) {
 
 $startTime = Get-Date
 $currentDirectory = $dir
-$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 Write-Output "`nScanning $currentDirectory..."
 
-$handbrakePath = $scriptPath + "\HandBrakeCLI.exe"
 $errorLogPath = $scriptPath + "\error.log"
 $goodLogPath = $scriptPath + "\good.log"
 

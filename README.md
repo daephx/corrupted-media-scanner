@@ -5,6 +5,8 @@ Uses handbrake to check if files are corrupt or unplayable
 
 Clone or download project
 
+Download HandBrakeCLI.exe for Windows from https://handbrake.fr/downloads2.php and place it in same directory as scan.ps1
+
 Right-click `scan.ps1` then press 'run with powershell' or run from powershell window
 
 Example run: `.\scan.ps1 -dir 'c:\media\directory' -threads 4`
