@@ -11,9 +11,15 @@ Right-click `scan.ps1` then press 'run with powershell' or run from powershell w
 
 Example run: `.\scan.ps1 -dir 'c:\media\directory' -threads 4`
 
+<u>Required</u>
+
 <b>-dir</b> This is your media directory
 
 <b>-threads</b> This is how many handbrake instances will run at once, I recommend running less than 4 unless you have a really good CPU
+
+<u>Optional</u>
+
+<b>-min</b> Minimum size of files to scan in MegaBytes (default=5) set to 0 to scan pictures, nfo files, etc
 
 `good.log` will be generated in the root directory with files that are OK
 

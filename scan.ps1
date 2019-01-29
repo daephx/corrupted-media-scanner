@@ -2,8 +2,10 @@ param (
     [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
     [string]$dir,
     [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-    [Int]$threads = 4
+    [Int]$threads = 4,
+    [int]$min = 5
 )
+$min = $min * 1000000
 
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 $handbrakePath = $scriptPath + "\HandBrakeCLI.exe"
@@ -74,7 +76,8 @@ else {
 
 Write-Output "`nCounting items..."
 
-$files = (Get-ChildItem "$currentDirectory" *.* -R -File).FullName
+$unfilteredFiles = Get-ChildItem "$currentDirectory" *.* -R -File
+$files = ($unfilteredFiles | Where-Object {$_.Length -gt $min}).FullName
 $totalItems = $files.Count
 Write-Output "$totalItems items to scan"
 $completedItems = 0
