@@ -21,9 +21,11 @@ Example run: `.\scan.ps1 -dir 'c:\media\directory' -threads 4`
 
 <b>-min</b> Minimum size of files to scan in MegaBytes (default=5) set to 0 to scan pictures, nfo files, etc
 
-`good.log` will be generated in the root directory with files that are OK
+`good(yyyyMMddmmss).log` will be generated in the root directory with files that are OK
 
-`error.log` will be generated in the root directory with information about corrupted files
+`error(yyyyMMddmmss).log` will be generated in the root directory with information about corrupted files
+
+`(yyyyMMddmmss).csv` will be generated in the root directory with information about all files in a csv
 
 - <b>EBML header parsing failed</b>: highly likely this file won't play
 - <b>Read error</b>: there are problems in the file but it <i>usually</i> can still play

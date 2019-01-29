@@ -5,6 +5,8 @@ param (
     [Int]$threads = 4,
     [int]$min = 5
 )
+$startTime = Get-Date
+$dateString = $startTime.ToString("yyyyMMddmmss")
 $min = $min * 1000000
 
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
@@ -37,76 +39,88 @@ if ($threads -gt 4) {
     }
 }
 
-$startTime = Get-Date
 $currentDirectory = $dir
 Write-Output "`nScanning $currentDirectory..."
 
-$errorLogPath = $scriptPath + "\error.log"
-$goodLogPath = $scriptPath + "\good.log"
+$errorLogName = "error$dateString.log"
+$goodLogName = "good$dateString.log"
+$csvLogName = "$dateString.csv"
 
-if (!(Test-Path $goodLogPath)) {
-    New-Item -path $scriptPath -name good.log -type "file"
-    Write-Output "Created good log file"
-}
-else {
-    Write-Output "`ngood.log file exists. Overwrite? Press N to append to existing file or Y to clear file."
-    do {
-        $keyPress = [System.Console]::ReadKey()
-    }
-    until ($keyPress.Key -eq "Y" -or $keyPress.Key -eq "N")
-    if ($keyPress.Key -eq "Y") {
-        Clear-Content $goodLogPath
-    }
-}
+$csvLogPath = $scriptPath + "\$csvLogName"
+$errorLogPath = $scriptPath + "\$errorLogName"
+$goodLogPath = $scriptPath + "\$goodLogName "
 
-if (!(Test-Path $errorLogPath)) {
-    New-Item -path $scriptPath -name error.log -type "file"
-    Write-Output "Created error log file"
-}
-else {
-    Write-Output "`nerror.log file exists. Overwrite? Press N to append to existing file or Y to clear file."
-    do {
-        $keyPress = [System.Console]::ReadKey()
-    }
-    until ($keyPress.Key -eq "Y" -or $keyPress.Key -eq "N")
-    if ($keyPress.Key -eq "Y") {
-        Clear-Content $errorLogPath
-    }
-}
-
-Write-Output "`nCounting items..."
+Write-Output "Creating log files"
+Set-Content $csvLogPath -Value "File,Result"
+New-Item -path $scriptPath -name $errorLogName -type "file" | Out-Null
+New-Item -path $scriptPath -name $goodLogName -type "file" | Out-Null
+$countStartTime = Get-Date
+Write-Output "Counting items..."
 
 $unfilteredFiles = Get-ChildItem "$currentDirectory" *.* -R -File
 $files = ($unfilteredFiles | Where-Object {$_.Length -gt $min}).FullName
 $totalItems = $files.Count
-Write-Output "$totalItems items to scan"
+$countFinishTime = Get-Date
+$countTotalTime = $countFinishTime - $countStartTime
+Write-Output "$totalItems items detected in $([int]$countTotalTime.Seconds) seconds"
 $completedItems = 0
 Write-Output "Scanning in progress..."
 
 $scriptBlock = {
-    Param($file, $handbrake, $errorLog, $goodLog)
-    $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
-    $gmtx = new-object System.Threading.Mutex($false, "GoodLogFileAccessMTX")
+    Param($file, $handbrake, $errorLog, $goodLog, $csvLog)
+    $cmtx = new-object System.Threading.Mutex($false, "CSVLogFileAccessMTX")
     $result = &$handbrake -i $file --scan 2>&1 | Out-String
     if ($result.Contains("EBML header parsing failed")) {
+        $errorMessage = "EBML header parsing failed (highly likely won't play)"
+        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
         $emtx.WaitOne(5000)
-        "$file | EBML header parsing failed (highly likely won't play)" >> "$errorLog"
+        "$file | $errorMessage" >> "$errorLog"
         $emtx.ReleaseMutex()
+        $cmtx.WaitOne(5000)
+        [PSCustomObject]@{
+            'File' = $file
+            'Result' = $errorMessage
+        } | Export-Csv -append -path $csvLog
+        $cmtx.ReleaseMutex()
     }
     elseif ($result.Contains("Read error at pos. 1 (0x1)")) {
+        $errorMessage = "Read error at pos. 1 (0x1) (highly likely won't play)"
+        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
         $emtx.WaitOne(4000)
-        "$file | Read error at pos. 1 (0x1) (highly likely won't play)" >> "$errorLog"
+        "$file | $errorMessage" >> "$errorLog"
         $emtx.ReleaseMutex()
+        $cmtx.WaitOne(5000)
+        [PSCustomObject]@{
+            'File' = $file
+            'Result' = $errorMessage
+        } | Export-Csv -append -path $csvLog
+        $cmtx.ReleaseMutex()
     }
     elseif ($result.Contains("Read error")) {
+        $errorMessage = "Read error (usually will still play)"
+        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
         $emtx.WaitOne(3000)
-        "$file | Read error (usually will still play)" >> "$errorLog"
+        "$file | $errorMessage" >> "$errorLog"
         $emtx.ReleaseMutex()
+        $cmtx.WaitOne(5000)
+        [PSCustomObject]@{
+            'File' = $file
+            'Result' = $errorMessage
+        } | Export-Csv -append -path $csvLog
+        $cmtx.ReleaseMutex()
     }
     else {
+        $errorMessage = "OK!"
+        $gmtx = new-object System.Threading.Mutex($false, "GoodLogFileAccessMTX")
         $gmtx.WaitOne(100)
-        "$file OK!" >> "$goodLog"
+        "$file | $errorMessage" >> "$goodLog"
         $gmtx.ReleaseMutex()
+        $cmtx.WaitOne(5000)
+        [PSCustomObject]@{
+            'File' = $file
+            'Result' = $errorMessage
+        } | Export-Csv -append -path $csvLog
+        $cmtx.ReleaseMutex()
     } 
 }
 
@@ -117,7 +131,7 @@ $files | ForEach-Object {
         $running | Wait-Job -Any | Out-Null
     }
 
-    Start-Job -Scriptblock $scriptblock -ArgumentList @($_, $handbrakePath, $errorLogPath, $goodLogPath) | Out-Null
+    Start-Job -Scriptblock $scriptblock -ArgumentList @($_, $handbrakePath, $errorLogPath, $goodLogPath, $csvLogPath) | Out-Null
     if ($totalItems -ne 0) {
         Write-Progress -Activity "Scan" -Status "Progress($completedItems/$totalItems) - $_" -PercentComplete ($completedItems / $totalItems * 100)
     }
@@ -134,4 +148,4 @@ $timeTaken = $finishTime - $startTime
 Remove-Job -State Completed
 
 Write-Output "Scan took $($timeTaken.Days) Days $($timeTaken.Hours) Hours $($timeTaken.Minutes) Minutes $($timeTaken.Seconds) Seconds"
-Write-Output "$($totalErrors) files with problems. Refer to error.log for a list of problem files and good.log for good files."
+Write-Output "$($totalErrors) files with problems. Refer to $errorLogName for a list of problem files, $goodLogName for good files and $csvLogName for a spreadsheet of all files."
