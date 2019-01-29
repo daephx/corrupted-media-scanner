@@ -108,8 +108,19 @@ $scriptBlock = {
             'Result' = $errorMessage
         } | Export-Csv -append -path $csvLog
         $cmtx.ReleaseMutex()
-    }
-    else {
+    } elseif ($result -like '*read error*') {
+        $errorMessage = "Other Read error (unknown if will still play)"
+        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
+        $emtx.WaitOne(3000)
+        "$file | $errorMessage" >> "$errorLog"
+        $emtx.ReleaseMutex()
+        $cmtx.WaitOne(5000)
+        [PSCustomObject]@{
+            'File' = $file
+            'Result' = $errorMessage
+        } | Export-Csv -append -path $csvLog
+        $cmtx.ReleaseMutex()
+    } else {
         $errorMessage = "OK!"
         $gmtx = new-object System.Threading.Mutex($false, "GoodLogFileAccessMTX")
         $gmtx.WaitOne(100)
