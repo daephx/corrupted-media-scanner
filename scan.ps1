@@ -70,69 +70,73 @@ $scriptBlock = {
     Param($file, $handbrake, $errorLog, $goodLog, $csvLog)
     $cmtx = new-object System.Threading.Mutex($false, "CSVLogFileAccessMTX")
     $result = &$handbrake -i $file --scan 2>&1 | Out-String
-    if ($result.Contains("EBML header parsing failed")) {
-        $errorMessage = "EBML header parsing failed (highly likely won't play)"
-        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
-        $emtx.WaitOne(5000)
-        "$file | $errorMessage" >> "$errorLog"
-        $emtx.ReleaseMutex()
-        $cmtx.WaitOne(5000)
-        [PSCustomObject]@{
-            'File' = $file
-            'Result' = $errorMessage
-        } | Export-Csv -append -path $csvLog
-        $cmtx.ReleaseMutex()
+    switch ($result) {
+        {$_.Contains("EBML header parsing failed")} {
+            $errorMessage = "EBML header parsing failed (highly likely won't play)"
+            $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
+            $emtx.WaitOne(5000)
+            "$file | $errorMessage" >> "$errorLog"
+            $emtx.ReleaseMutex()
+            $cmtx.WaitOne(5000)
+            [PSCustomObject]@{
+                'File' = $file
+                'Result' = $errorMessage
+            } | Export-Csv -append -path $csvLog
+            $cmtx.ReleaseMutex()
+        }
+        {$_.Contains("Read error at pos. 1 (0x1)")}{
+            $errorMessage = "Read error at pos. 1 (0x1) (highly likely won't play)"
+            $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
+            $emtx.WaitOne(4000)
+            "$file | $errorMessage" >> "$errorLog"
+            $emtx.ReleaseMutex()
+            $cmtx.WaitOne(5000)
+            [PSCustomObject]@{
+                'File' = $file
+                'Result' = $errorMessage
+            } | Export-Csv -append -path $csvLog
+            $cmtx.ReleaseMutex()
+        }
+        {$_.Contains("Read error")} {
+            $errorMessage = "Read error (usually will still play)"
+            $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
+            $emtx.WaitOne(3000)
+            "$file | $errorMessage" >> "$errorLog"
+            $emtx.ReleaseMutex()
+            $cmtx.WaitOne(5000)
+            [PSCustomObject]@{
+                'File' = $file
+                'Result' = $errorMessage
+            } | Export-Csv -append -path $csvLog
+            $cmtx.ReleaseMutex()
+        }
+        {$_.Contains("scan: unrecognized file type")} {
+            $errorMessage = "Unrecognized file type (highly likely won't play)"
+            $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
+            $emtx.WaitOne(3000)
+            "$file | $errorMessage" >> "$errorLog"
+            $emtx.ReleaseMutex()
+            $cmtx.WaitOne(5000)
+            [PSCustomObject]@{
+                'File' = $file
+                'Result' = $errorMessage
+            } | Export-Csv -append -path $csvLog
+            $cmtx.ReleaseMutex()
+        }
+        default {
+            $errorMessage = "OK!"
+            $gmtx = new-object System.Threading.Mutex($false, "GoodLogFileAccessMTX")
+            $gmtx.WaitOne(100)
+            "$file | $errorMessage" >> "$goodLog"
+            $gmtx.ReleaseMutex()
+            $cmtx.WaitOne(5000)
+            [PSCustomObject]@{
+                'File' = $file
+                'Result' = $errorMessage
+            } | Export-Csv -append -path $csvLog
+            $cmtx.ReleaseMutex()
+        }
     }
-    elseif ($result.Contains("Read error at pos. 1 (0x1)")) {
-        $errorMessage = "Read error at pos. 1 (0x1) (highly likely won't play)"
-        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
-        $emtx.WaitOne(4000)
-        "$file | $errorMessage" >> "$errorLog"
-        $emtx.ReleaseMutex()
-        $cmtx.WaitOne(5000)
-        [PSCustomObject]@{
-            'File' = $file
-            'Result' = $errorMessage
-        } | Export-Csv -append -path $csvLog
-        $cmtx.ReleaseMutex()
-    }
-    elseif ($result.Contains("Read error")) {
-        $errorMessage = "Read error (usually will still play)"
-        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
-        $emtx.WaitOne(3000)
-        "$file | $errorMessage" >> "$errorLog"
-        $emtx.ReleaseMutex()
-        $cmtx.WaitOne(5000)
-        [PSCustomObject]@{
-            'File' = $file
-            'Result' = $errorMessage
-        } | Export-Csv -append -path $csvLog
-        $cmtx.ReleaseMutex()
-    } elseif ($result.Contains("scan: unrecognized file type")) {
-        $errorMessage = "Unrecognized file type (highly likely won't play)"
-        $emtx = new-object System.Threading.Mutex($false, "ErrorLogFileAccessMTX")
-        $emtx.WaitOne(3000)
-        "$file | $errorMessage" >> "$errorLog"
-        $emtx.ReleaseMutex()
-        $cmtx.WaitOne(5000)
-        [PSCustomObject]@{
-            'File' = $file
-            'Result' = $errorMessage
-        } | Export-Csv -append -path $csvLog
-        $cmtx.ReleaseMutex()
-    } else {
-        $errorMessage = "OK!"
-        $gmtx = new-object System.Threading.Mutex($false, "GoodLogFileAccessMTX")
-        $gmtx.WaitOne(100)
-        "$file | $errorMessage" >> "$goodLog"
-        $gmtx.ReleaseMutex()
-        $cmtx.WaitOne(5000)
-        [PSCustomObject]@{
-            'File' = $file
-            'Result' = $errorMessage
-        } | Export-Csv -append -path $csvLog
-        $cmtx.ReleaseMutex()
-    } 
 }
 
 $files | ForEach-Object {
